@@ -62,6 +62,20 @@ write_preset_file() {
   local checkpoint="$3"
   local lora_a="$4"
   local lora_b="$5"
+  local lora_c="${6:-}"
+  local lora_c_block=""
+
+  if [ -n "$lora_c" ]; then
+    lora_c_block=$(cat <<JSON
+,
+    {
+      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_c}",
+      "dir": "loras",
+      "filename": "${lora_c}"
+    }
+JSON
+)
+  fi
 
   cat > "$preset_file" <<JSON
 {
@@ -96,7 +110,7 @@ write_preset_file() {
       "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_b}",
       "dir": "loras",
       "filename": "${lora_b}"
-    },
+    }${lora_c_block},
     {
       "url": "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazyneg.safetensors",
       "dir": "embeddings",
@@ -244,7 +258,8 @@ write_presets() {
   write_preset_file "$PRESETS_DIR/meitabuu.json" "MEITABUU" \
     "Better_Days.safetensors" \
     "Balecxi_Style_Illustrious-10.safetensors" \
-    "IFL_v1.0_IL.safetensors"
+    "IFL_v1.0_IL.safetensors" \
+    "Shexyo.safetensors"
 
   write_preset_file "$PRESETS_DIR/studioneverai.json" "StudioneverAI" \
     "Hassaku.safetensors" \
