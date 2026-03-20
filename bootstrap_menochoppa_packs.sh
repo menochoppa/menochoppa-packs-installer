@@ -24,6 +24,7 @@ PRESET_NAME="${PRESET_NAME:-menochoppa Packs}"
 HF_MODELS_REPO="${HF_MODELS_REPO:-menochoppa/comfy_models_pack}"
 POLL_INTERVAL="${POLL_INTERVAL:-2}"
 MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-1800}"
+VALIDATE_HF_ASSETS="${VALIDATE_HF_ASSETS:-0}"
 
 REQUIRED_MODEL_PATHS=(
   "checkpoints/Better_Days.safetensors"
@@ -189,6 +190,11 @@ JSON
 }
 
 validate_hf_assets() {
+  if [ "$VALIDATE_HF_ASSETS" != "1" ]; then
+    log_info "HF validation skipped for faster startup (set VALIDATE_HF_ASSETS=1 to enable)."
+    return 0
+  fi
+
   if ! command -v python3 >/dev/null 2>&1; then
     log_warn "python3 nao encontrado; pulando validacao do Hugging Face."
     return 0
