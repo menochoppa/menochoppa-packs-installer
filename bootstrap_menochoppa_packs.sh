@@ -37,6 +37,23 @@ REQUIRED_MODEL_PATHS=(
   "loras/pantsushi.safetensors"
   "loras/princess_rc_il.safetensors"
   "loras/shexyo_style_trigger.safetensors"
+  "embeddings/lazyneg.safetensors"
+  "embeddings/lazypos.safetensors"
+  "embeddings/Smooth_Negative-neg.safetensors"
+  "embeddings/Smooth_Quality.safetensors"
+  "sams/sam_vit_b_01ec64.pth"
+  "ultralytics/bbox/Anzhc_Faceseg_1024_v2_y8n.pt"
+  "ultralytics/bbox/Eyeful_v2-Paired.pt"
+  "ultralytics/bbox/hand_yolov8s.pt"
+  "ultralytics/bbox/ntd11_anime_nsfw_segm_v5-variant1.pt"
+  "ultralytics/bbox/99coins_anime_girl_face_m_seg.pt"
+  "upscale_models/2x-AnimeSharpV4_RCAN_fp16_op17.onnx"
+  "upscale_models/4x-AnimeSharp.pth"
+  "upscale_models/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors"
+  "upscale_models/2x-AnimeSharpV3.pth"
+  "upscale_models/4x_foolhardy_Remacri.pth"
+  "upscale_models/4x-UltraSharpV2.pth"
+  "upscale_models/4x-UltraSharpV2_Lite.pth"
 )
 
 write_preset_file() {
@@ -67,7 +84,141 @@ write_preset_file() {
       "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_b}",
       "dir": "loras",
       "filename": "${lora_b}"
+    },
+    {
+      "url": "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazyneg.safetensors",
+      "dir": "embeddings",
+      "filename": "lazyneg.safetensors"
+    },
+    {
+      "url": "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazypos.safetensors",
+      "dir": "embeddings",
+      "filename": "lazypos.safetensors"
+    },
+    {
+      "url": "https://huggingface.co/datasets/WhiteAiZ/sd-webui-forge-classic/resolve/main/models/embeddings/Smooth_Negative-neg.safetensors",
+      "dir": "embeddings",
+      "filename": "Smooth_Negative-neg.safetensors"
+    },
+    {
+      "url": "https://huggingface.co/Coercer/Lora_Compilation/resolve/main/Smooth_Quality.safetensors",
+      "dir": "embeddings",
+      "filename": "Smooth_Quality.safetensors"
+    },
+    {
+      "url": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth",
+      "dir": "sams",
+      "filename": "sam_vit_b_01ec64.pth"
+    },
+    {
+      "url": "https://huggingface.co/Anzhc/Anzhcs_YOLOs/resolve/main/Anzhc%20Face%20seg%201024%20v2%20y8n.pt",
+      "dir": "ultralytics/bbox",
+      "filename": "Anzhc_Faceseg_1024_v2_y8n.pt"
+    },
+    {
+      "url": "https://huggingface.co/adbrasi/wanlotest/resolve/main/Eyeful_v2-Individual.pt",
+      "dir": "ultralytics/bbox",
+      "filename": "Eyeful_v2-Paired.pt"
+    },
+    {
+      "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8s.pt",
+      "dir": "ultralytics/bbox",
+      "filename": "hand_yolov8s.pt"
+    },
+    {
+      "url": "https://huggingface.co/adbrasi/wanlotest/resolve/main/ntd11_anime_nsfw_segm_v5-variant1.pt",
+      "dir": "ultralytics/bbox",
+      "filename": "ntd11_anime_nsfw_segm_v5-variant1.pt"
+    },
+    {
+      "url": "https://huggingface.co/adbrasi/testedownload/resolve/main/99coins_anime_girl_face_m_seg.pt",
+      "dir": "ultralytics/bbox",
+      "filename": "99coins_anime_girl_face_m_seg.pt"
+    },
+    {
+      "url": "https://huggingface.co/adbrasi/wanlotest/resolve/main/2x-AnimeSharpV4_RCAN_fp16_op17.onnx",
+      "dir": "upscale_models",
+      "filename": "2x-AnimeSharpV4_RCAN_fp16_op17.onnx"
+    },
+    {
+      "url": "https://huggingface.co/Kim2091/AnimeSharp/resolve/main/4x-AnimeSharp.pth",
+      "dir": "upscale_models",
+      "filename": "4x-AnimeSharp.pth"
+    },
+    {
+      "url": "https://huggingface.co/adbrasi/wanlotest/resolve/main/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors",
+      "dir": "upscale_models",
+      "filename": "2x-AnimeSharpV4_Fast_RCAN_PU.safetensors"
+    },
+    {
+      "url": "https://huggingface.co/Kim2091/AnimeSharpV3/resolve/main/2x-AnimeSharpV3.pth",
+      "dir": "upscale_models",
+      "filename": "2x-AnimeSharpV3.pth"
+    },
+    {
+      "url": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
+      "dir": "upscale_models",
+      "filename": "4x_foolhardy_Remacri.pth"
+    },
+    {
+      "url": "https://huggingface.co/Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2.pth",
+      "dir": "upscale_models",
+      "filename": "4x-UltraSharpV2.pth"
+    },
+    {
+      "url": "https://huggingface.co/Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2_Lite.pth",
+      "dir": "upscale_models",
+      "filename": "4x-UltraSharpV2_Lite.pth"
     }
+  ],
+  "nodes": [
+    "https://github.com/adbrasi/huggpackreator",
+    "https://github.com/adbrasi/packreator_processor",
+    "https://github.com/Cezarsaint/Packreator_managerMEita",
+    "https://github.com/adbrasi/cezarsave34",
+    "https://github.com/adbrasi/prompta_generita",
+    "https://github.com/adbrasi/pageonetor",
+    "https://github.com/QuietNoise/comfyui_queue_manager",
+    "https://github.com/adbrasi/pakreatorio",
+    "https://github.com/adbrasi/WaterMark_bumbumzin",
+    "https://github.com/adbrasi/marcadaguita",
+    "https://github.com/adbrasi/randomico",
+    "https://github.com/kijai/ComfyUI-KJNodes",
+    "https://github.com/ltdrdata/ComfyUI-Inspire-Pack",
+    "https://github.com/adbrasi/groqrouter",
+    "https://github.com/adbrasi/find_charakito",
+    "https://github.com/adbrasi/randomsizito",
+    "https://github.com/adbrasi/importex",
+    "https://github.com/adbrasi/storitadifusita",
+    "https://github.com/adbrasi/attentionPPM",
+    "https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes",
+    "https://github.com/sipherxyz/comfyui-art-venture",
+    "https://github.com/pamparamm/sd-perturbed-attention",
+    "https://github.com/KoreTeknology/ComfyUI-Universal-Styler",
+    "https://github.com/WASasquatch/was-node-suite-comfyui",
+    "https://github.com/chflame163/ComfyUI_LayerStyle",
+    "https://github.com/pythongosssss/ComfyUI-WD14-Tagger",
+    "https://github.com/ltdrdata/ComfyUI-Impact-Pack",
+    "https://github.com/pythongosssss/ComfyUI-Custom-Scripts",
+    "https://github.com/rgthree/rgthree-comfy",
+    "https://github.com/adbrasi/Importador",
+    "https://github.com/adbrasi/GetFirstTag",
+    "https://github.com/adbrasi/comfydodi",
+    "https://github.com/omar92/ComfyUI-QualityOfLifeSuit_Omar92",
+    "https://github.com/Cezarsaint/blacklisto",
+    "https://github.com/TinyTerra/ComfyUI_tinyterraNodes",
+    "https://github.com/ltdrdata/ComfyUI-Impact-Subpack",
+    "https://github.com/Cezarsaint/rand0micoUploaderLoven",
+    "https://github.com/adbrasi/pixivmosaic",
+    "https://github.com/adbrasi/futfilter",
+    "https://github.com/shiimizu/ComfyUI_smZNodes",
+    "https://github.com/CoreyCorza/ComfyUI-CRZnodes",
+    "https://github.com/MoonGoblinDev/Civicomfy",
+    "https://github.com/Jonseed/ComfyUI-Detail-Daemon",
+    "https://github.com/fearnworks/ComfyUI_FearnworksNodes",
+    "https://github.com/aria1th/ComfyUI-LogicUtils",
+    "https://github.com/Extraltodeus/ComfyUI-AutomaticCFG",
+    "https://github.com/adbrasi/captionizador"
   ]
 }
 JSON
@@ -178,7 +329,7 @@ wait_for_arrakis_dir() {
 log_info "Preparing custom preset injection for Arrakis Start..."
 log_info "Preset set: MEITABUU, StudioneverAI, Auroredrem3d, Juliaverse, RuleGirl3d"
 log_info "HF repo: $HF_MODELS_REPO"
-log_info "Presets baixam apenas checkpoints e LoRAs nas pastas padrao do ComfyUI."
+log_info "Presets baixam checkpoints/LoRAs do preset, mais embeds/upscales/SAM/ultralytics e nodes do Arrakis2."
 
 validate_hf_assets
 start_upstream_bootstrap
