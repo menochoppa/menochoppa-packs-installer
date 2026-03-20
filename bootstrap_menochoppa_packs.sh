@@ -69,6 +69,18 @@ write_preset_file() {
   "description": "Preset do Menochoppa com checkpoint e LoRAs dedicados.",
   "use_sage_attention": false,
   "comfyui_flags": [],
+  "pip_commands": [
+    {
+      "command": ["python", "-m", "pip", "install", "-q", "pandas"],
+      "description": "Instalar pandas para prompta_generita",
+      "verify_import": "pandas"
+    },
+    {
+      "command": ["python", "-m", "pip", "install", "-q", "openpyxl"],
+      "description": "Instalar openpyxl para leitura de planilhas",
+      "verify_import": "openpyxl"
+    }
+  ],
   "models": [
     {
       "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/${checkpoint}",
