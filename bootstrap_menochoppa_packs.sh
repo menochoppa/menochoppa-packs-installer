@@ -37,11 +37,6 @@ REQUIRED_MODEL_PATHS=(
   "loras/pantsushi.safetensors"
   "loras/princess_rc_il.safetensors"
   "loras/shexyo_style_trigger.safetensors"
-  "sams/sam_vit_b_01ec64.pth"
-  "ultralytics/bbox/Anzhc_Faceseg_1024_v2_y8n.pt"
-  "ultralytics/bbox/ntd11_anime_nsfw_segm_v5-variant1.pt"
-  "upscale_models/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors"
-  "upscale_models/4x-AnimeSharp.pth"
 )
 
 write_preset_file() {
@@ -57,13 +52,6 @@ write_preset_file() {
   "description": "Preset do Menochoppa com checkpoint e LoRAs dedicados.",
   "use_sage_attention": false,
   "comfyui_flags": [],
-  "pip_commands": [
-    {
-      "command": ["python", "-m", "pip", "install", "-q", "pandas", "openpyxl"],
-      "description": "Instalar dependencias do PackPromptGenerator",
-      "allow_failure": true
-    }
-  ],
   "models": [
     {
       "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/${checkpoint}",
@@ -79,75 +67,7 @@ write_preset_file() {
       "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_b}",
       "dir": "loras",
       "filename": "${lora_b}"
-    },
-    {
-      "url": "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazyneg.safetensors",
-      "dir": "embeddings",
-      "filename": "lazyneg.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazypos.safetensors",
-      "dir": "embeddings",
-      "filename": "lazypos.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/datasets/WhiteAiZ/sd-webui-forge-classic/resolve/main/models/embeddings/Smooth_Negative-neg.safetensors",
-      "dir": "embeddings",
-      "filename": "Smooth_Negative-neg.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/Coercer/Lora_Compilation/resolve/main/Smooth_Quality.safetensors",
-      "dir": "embeddings",
-      "filename": "Smooth_Quality.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/upscale_models/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors",
-      "dir": "upscale_models",
-      "filename": "2x-AnimeSharpV4_Fast_RCAN_PU.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/upscale_models/4x-AnimeSharp.pth",
-      "dir": "upscale_models",
-      "filename": "4x-AnimeSharp.pth"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/sams/sam_vit_b_01ec64.pth",
-      "dir": "sams",
-      "filename": "sam_vit_b_01ec64.pth"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/ultralytics/bbox/Anzhc_Faceseg_1024_v2_y8n.pt",
-      "dir": "ultralytics/bbox",
-      "filename": "Anzhc_Faceseg_1024_v2_y8n.pt"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/ultralytics/bbox/ntd11_anime_nsfw_segm_v5-variant1.pt",
-      "dir": "ultralytics/bbox",
-      "filename": "ntd11_anime_nsfw_segm_v5-variant1.pt"
     }
-  ],
-  "nodes": [
-    "https://github.com/adbrasi/cezarsave34",
-    "https://github.com/adbrasi/comfydodi",
-    "https://github.com/adbrasi/futfilter",
-    "https://github.com/adbrasi/pixivmosaic",
-    "https://github.com/adbrasi/prompta_generita",
-    "https://github.com/adbrasi/randomico",
-    "https://github.com/adbrasi/randomsizito",
-    "https://github.com/Cezarsaint/blacklisto",
-    "https://github.com/Cezarsaint/rand0micoUploaderLoven",
-    "https://github.com/Extraltodeus/ComfyUI-AutomaticCFG",
-    "https://github.com/Jonseed/ComfyUI-Detail-Daemon",
-    "https://github.com/ltdrdata/ComfyUI-Impact-Pack",
-    "https://github.com/ltdrdata/ComfyUI-Impact-Subpack",
-    "https://github.com/omar92/ComfyUI-QualityOfLifeSuit_Omar92",
-    "https://github.com/pythongosssss/ComfyUI-Custom-Scripts",
-    "https://github.com/pythongosssss/ComfyUI-WD14-Tagger",
-    "https://github.com/rgthree/rgthree-comfy",
-    "https://github.com/sipherxyz/comfyui-art-venture",
-    "https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes",
-    "https://github.com/TinyTerra/ComfyUI_tinyterraNodes",
-    "https://github.com/WASasquatch/was-node-suite-comfyui"
   ]
 }
 JSON
@@ -258,7 +178,7 @@ wait_for_arrakis_dir() {
 log_info "Preparing custom preset injection for Arrakis Start..."
 log_info "Preset set: MEITABUU, StudioneverAI, Auroredrem3d, Juliaverse, RuleGirl3d"
 log_info "HF repo: $HF_MODELS_REPO"
-log_info "Embeddings sao baixados de repositorios publicos externos no Hugging Face."
+log_info "Presets baixam apenas checkpoints e LoRAs nas pastas padrao do ComfyUI."
 
 validate_hf_assets
 start_upstream_bootstrap
