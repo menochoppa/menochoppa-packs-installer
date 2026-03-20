@@ -22,7 +22,7 @@ PRESETS_DIR="$ARRAKIS_DIR/presets"
 PRESET_FILE="${PRESET_FILE:-$PRESETS_DIR/menochoppa-packs.json}"
 PRESET_NAME="${PRESET_NAME:-menochoppa Packs}"
 HF_MODELS_REPO="${HF_MODELS_REPO:-menochoppa/comfy_models_pack}"
-POLL_INTERVAL="${POLL_INTERVAL:-2}"
+POLL_INTERVAL="${POLL_INTERVAL:-1}"
 MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-1800}"
 VALIDATE_HF_ASSETS="${VALIDATE_HF_ASSETS:-0}"
 
@@ -239,14 +239,13 @@ start_upstream_bootstrap() {
     curl -fsSL "$UPSTREAM_BOOTSTRAP_URL" | bash
   ) &
   BOOTSTRAP_PID=$!
-  export BOOTSTRAP_PID
 }
 
-wait_for_preset_target() {
+wait_for_arrakis_dir() {
   local waited=0
 
   while [ "$waited" -lt "$MAX_WAIT_SECONDS" ]; do
-    if [ -d "$PRESETS_DIR" ]; then
+    if [ -d "$ARRAKIS_DIR" ]; then
       return 0
     fi
 
@@ -269,10 +268,10 @@ log_info "Embeddings sao baixados de repositorios publicos externos no Hugging F
 validate_hf_assets
 start_upstream_bootstrap
 
-if wait_for_preset_target; then
+if [ -d "$ARRAKIS_DIR" ] || wait_for_arrakis_dir; then
   write_preset
 else
-  log_warn "Could not find $PRESETS_DIR before upstream bootstrap finished."
+  log_warn "Could not find $ARRAKIS_DIR before upstream bootstrap finished."
   log_warn "If the preset does not appear, rerun the wrapper after /workspace/comfy/arrakis_start exists."
 fi
 
