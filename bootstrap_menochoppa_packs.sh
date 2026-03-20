@@ -223,7 +223,7 @@ if missing:
     for item in missing:
         print(f"  - {item}")
 else:
-    print("[OK] Todos os assets do workflow foram encontrados no repo do Hugging Face.")
+    print("[OK] Todos os assets verificados do pack principal foram encontrados no repo do Hugging Face.")
 PY
 }
 
@@ -258,6 +258,7 @@ wait_for_preset_target() {
 log_info "Preparing custom preset injection for Arrakis Start..."
 log_info "Preset name: $PRESET_NAME"
 log_info "HF repo: $HF_MODELS_REPO"
+log_info "Embeddings sao baixados de repositorios publicos externos no Hugging Face."
 
 validate_hf_assets
 start_upstream_bootstrap
