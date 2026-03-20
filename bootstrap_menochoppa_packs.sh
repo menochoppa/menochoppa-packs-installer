@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wrapper for Arrakis Start that injects the "menochoppa Packs" preset
+# Wrapper for Arrakis Start that injects custom Menochoppa presets
 # without modifying the upstream adbrasi/arrakis_start repository.
 
 set -euo pipefail
@@ -19,8 +19,6 @@ UPSTREAM_BOOTSTRAP_URL="${UPSTREAM_BOOTSTRAP_URL:-https://raw.githubusercontent.
 COMFY_BASE="${COMFY_BASE:-/workspace/comfy}"
 ARRAKIS_DIR="${ARRAKIS_DIR:-$COMFY_BASE/arrakis_start}"
 PRESETS_DIR="$ARRAKIS_DIR/presets"
-PRESET_FILE="${PRESET_FILE:-$PRESETS_DIR/menochoppa-packs.json}"
-PRESET_NAME="${PRESET_NAME:-menochoppa Packs}"
 HF_MODELS_REPO="${HF_MODELS_REPO:-menochoppa/comfy_models_pack}"
 POLL_INTERVAL="${POLL_INTERVAL:-1}"
 MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-1800}"
@@ -46,74 +44,41 @@ REQUIRED_MODEL_PATHS=(
   "upscale_models/4x-AnimeSharp.pth"
 )
 
-write_preset() {
-  mkdir -p "$PRESETS_DIR"
-  cat > "$PRESET_FILE" <<JSON
+write_preset_file() {
+  local preset_file="$1"
+  local preset_name="$2"
+  local checkpoint="$3"
+  local lora_a="$4"
+  local lora_b="$5"
+
+  cat > "$preset_file" <<JSON
 {
-  "name": "${PRESET_NAME}",
-  "description": "Pack do Menochoppa com modelos e embeddings usados no workflow_geracao_2026V19.",
+  "name": "${preset_name}",
+  "description": "Preset do Menochoppa com checkpoint e LoRAs dedicados.",
   "use_sage_attention": false,
   "comfyui_flags": [],
+  "pip_commands": [
+    {
+      "command": ["python", "-m", "pip", "install", "-q", "pandas", "openpyxl"],
+      "description": "Instalar dependencias do PackPromptGenerator",
+      "allow_failure": true
+    }
+  ],
   "models": [
     {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/Better_Days.safetensors",
+      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/${checkpoint}",
       "dir": "checkpoints",
-      "filename": "Better_Days.safetensors"
+      "filename": "${checkpoint}"
     },
     {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/Hassaku.safetensors",
-      "dir": "checkpoints",
-      "filename": "Hassaku.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/magicILL_magicILLEPSV10.safetensors",
-      "dir": "checkpoints",
-      "filename": "magicILL_magicILLEPSV10.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/waiIllustriousSDXL_v140.safetensors",
-      "dir": "checkpoints",
-      "filename": "waiIllustriousSDXL_v140.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/Balecxi_Style_Illustrious-10.safetensors",
+      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_a}",
       "dir": "loras",
-      "filename": "Balecxi_Style_Illustrious-10.safetensors"
+      "filename": "${lora_a}"
     },
     {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/DisneyStudios_style-12IL.safetensors",
+      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_b}",
       "dir": "loras",
-      "filename": "DisneyStudios_style-12IL.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/IFL_v1.0_IL.safetensors",
-      "dir": "loras",
-      "filename": "IFL_v1.0_IL.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/Shexyo.safetensors",
-      "dir": "loras",
-      "filename": "Shexyo.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/lightingSlider.safetensors",
-      "dir": "loras",
-      "filename": "lightingSlider.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/pantsushi.safetensors",
-      "dir": "loras",
-      "filename": "pantsushi.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/princess_rc_il.safetensors",
-      "dir": "loras",
-      "filename": "princess_rc_il.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/shexyo_style_trigger.safetensors",
-      "dir": "loras",
-      "filename": "shexyo_style_trigger.safetensors"
+      "filename": "${lora_b}"
     },
     {
       "url": "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazyneg.safetensors",
@@ -186,7 +151,37 @@ write_preset() {
   ]
 }
 JSON
-  log_success "Preset injected at $PRESET_FILE"
+  log_success "Preset injected at $preset_file"
+}
+
+write_presets() {
+  mkdir -p "$PRESETS_DIR"
+  rm -f "$PRESETS_DIR/menochoppa-packs.json"
+
+  write_preset_file "$PRESETS_DIR/meitabuu.json" "MEITABUU" \
+    "Better_Days.safetensors" \
+    "Balecxi_Style_Illustrious-10.safetensors" \
+    "IFL_v1.0_IL.safetensors"
+
+  write_preset_file "$PRESETS_DIR/studioneverai.json" "StudioneverAI" \
+    "Hassaku.safetensors" \
+    "Balecxi_Style_Illustrious-10.safetensors" \
+    "Shexyo.safetensors"
+
+  write_preset_file "$PRESETS_DIR/auroredrem3d.json" "Auroredrem3d" \
+    "magicILL_magicILLEPSV10.safetensors" \
+    "DisneyStudios_style-12IL.safetensors" \
+    "princess_rc_il.safetensors"
+
+  write_preset_file "$PRESETS_DIR/juliaverse.json" "Juliaverse" \
+    "waiIllustriousSDXL_v140.safetensors" \
+    "IFL_v1.0_IL.safetensors" \
+    "shexyo_style_trigger.safetensors"
+
+  write_preset_file "$PRESETS_DIR/rulegirl3d.json" "RuleGirl3d" \
+    "waiIllustriousSDXL_v140.safetensors" \
+    "pantsushi.safetensors" \
+    "lightingSlider.safetensors"
 }
 
 validate_hf_assets() {
@@ -261,7 +256,7 @@ wait_for_arrakis_dir() {
 }
 
 log_info "Preparing custom preset injection for Arrakis Start..."
-log_info "Preset name: $PRESET_NAME"
+log_info "Preset set: MEITABUU, StudioneverAI, Auroredrem3d, Juliaverse, RuleGirl3d"
 log_info "HF repo: $HF_MODELS_REPO"
 log_info "Embeddings sao baixados de repositorios publicos externos no Hugging Face."
 
@@ -269,7 +264,7 @@ validate_hf_assets
 start_upstream_bootstrap
 
 if [ -d "$ARRAKIS_DIR" ] || wait_for_arrakis_dir; then
-  write_preset
+  write_presets
 else
   log_warn "Could not find $ARRAKIS_DIR before upstream bootstrap finished."
   log_warn "If the preset does not appear, rerun the wrapper after /workspace/comfy/arrakis_start exists."
