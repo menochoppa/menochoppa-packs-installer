@@ -59,12 +59,16 @@ download_hf() {
   if command -v aria2c >/dev/null 2>&1; then
     aria2c -c -x 4 -s 4 --console-log-level=warn "${aria_headers[@]}" --dir="$target_dir" --out="$filename" "$url" || \
     curl "${curl_args[@]}" "$url" || \
-    wget "${wget_args[@]}" "$url" || \
-    log_error "Download falhou: $filename"
+    wget "${wget_args[@]}" "$url" || {
+      log_error "Download falhou: $filename"
+      return 1
+    }
   else
     curl "${curl_args[@]}" "$url" || \
-    wget "${wget_args[@]}" "$url" || \
-    log_error "Download falhou: $filename"
+    wget "${wget_args[@]}" "$url" || {
+      log_error "Download falhou: $filename"
+      return 1
+    }
   fi
 }
 

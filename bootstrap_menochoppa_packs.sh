@@ -56,6 +56,60 @@ REQUIRED_MODEL_PATHS=(
   "upscale_models/4x-UltraSharpV2_Lite.pth"
 )
 
+HF_LORA_FILES=(
+  "Balecxi_Style_Illustrious-10.safetensors"
+  "DisneyStudios_style-12IL.safetensors"
+  "IFL_v1.0_IL.safetensors"
+  "Shexyo.safetensors"
+  "lightingSlider.safetensors"
+  "pantsushi.safetensors"
+  "princess_rc_il.safetensors"
+  "shexyo_style_trigger.safetensors"
+)
+
+SHARED_MODEL_ENTRIES=(
+  "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazyneg.safetensors|embeddings|lazyneg.safetensors"
+  "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazypos.safetensors|embeddings|lazypos.safetensors"
+  "https://huggingface.co/datasets/WhiteAiZ/sd-webui-forge-classic/resolve/main/models/embeddings/Smooth_Negative-neg.safetensors|embeddings|Smooth_Negative-neg.safetensors"
+  "https://huggingface.co/Coercer/Lora_Compilation/resolve/main/Smooth_Quality.safetensors|embeddings|Smooth_Quality.safetensors"
+  "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth|sams|sam_vit_b_01ec64.pth"
+  "https://huggingface.co/Anzhc/Anzhcs_YOLOs/resolve/main/Anzhc%20Face%20seg%201024%20v2%20y8n.pt|ultralytics/bbox|Anzhc_Faceseg_1024_v2_y8n.pt"
+  "https://huggingface.co/adbrasi/wanlotest/resolve/main/Eyeful_v2-Individual.pt|ultralytics/bbox|Eyeful_v2-Paired.pt"
+  "https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8s.pt|ultralytics/bbox|hand_yolov8s.pt"
+  "https://huggingface.co/adbrasi/wanlotest/resolve/main/ntd11_anime_nsfw_segm_v5-variant1.pt|ultralytics/bbox|ntd11_anime_nsfw_segm_v5-variant1.pt"
+  "https://huggingface.co/adbrasi/testedownload/resolve/main/99coins_anime_girl_face_m_seg.pt|ultralytics/bbox|99coins_anime_girl_face_m_seg.pt"
+  "https://huggingface.co/adbrasi/wanlotest/resolve/main/2x-AnimeSharpV4_RCAN_fp16_op17.onnx|upscale_models|2x-AnimeSharpV4_RCAN_fp16_op17.onnx"
+  "https://huggingface.co/Kim2091/AnimeSharp/resolve/main/4x-AnimeSharp.pth|upscale_models|4x-AnimeSharp.pth"
+  "https://huggingface.co/adbrasi/wanlotest/resolve/main/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors|upscale_models|2x-AnimeSharpV4_Fast_RCAN_PU.safetensors"
+  "https://huggingface.co/Kim2091/AnimeSharpV3/resolve/main/2x-AnimeSharpV3.pth|upscale_models|2x-AnimeSharpV3.pth"
+  "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth|upscale_models|4x_foolhardy_Remacri.pth"
+  "https://huggingface.co/Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2.pth|upscale_models|4x-UltraSharpV2.pth"
+  "https://huggingface.co/Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2_Lite.pth|upscale_models|4x-UltraSharpV2_Lite.pth"
+)
+
+build_model_entries_json() {
+  local entry url dir filename
+  local first=1
+
+  for entry in "$@"; do
+    IFS='|' read -r url dir filename <<< "$entry"
+    [ -n "$url" ] || continue
+
+    if [ "$first" -eq 0 ]; then
+      printf ',\n'
+    fi
+
+    cat <<JSON
+    {
+      "url": "${url}",
+      "dir": "${dir}",
+      "filename": "${filename}"
+    }
+JSON
+    first=0
+  done
+}
+
 write_preset_file() {
   local preset_file="$1"
   local preset_name="$2"
@@ -63,24 +117,27 @@ write_preset_file() {
   local lora_a="$4"
   local lora_b="$5"
   local lora_c="${6:-}"
-  local lora_c_block=""
+  local primary_loras="${lora_a}, ${lora_b}"
+  local lora_file
+  local -a preset_entries=(
+    "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/${checkpoint}|checkpoints|${checkpoint}"
+  )
 
   if [ -n "$lora_c" ]; then
-    lora_c_block=$(cat <<JSON
-,
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_c}",
-      "dir": "loras",
-      "filename": "${lora_c}"
-    }
-JSON
-)
+    primary_loras="${primary_loras}, ${lora_c}"
   fi
+
+  for lora_file in "${HF_LORA_FILES[@]}"; do
+    preset_entries+=("https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_file}|loras|${lora_file}")
+  done
+
+  local models_json
+  models_json="$(build_model_entries_json "${preset_entries[@]}" "${SHARED_MODEL_ENTRIES[@]}")"
 
   cat > "$preset_file" <<JSON
 {
   "name": "${preset_name}",
-  "description": "Preset do Menochoppa com checkpoint e LoRAs dedicados.",
+  "description": "Preset do Menochoppa com checkpoint dedicado. LoRAs principais: ${primary_loras}. O pack completo de LoRAs do HF tambem e baixado.",
   "use_sage_attention": false,
   "comfyui_flags": [],
   "pip_commands": [
@@ -96,106 +153,7 @@ JSON
     }
   ],
   "models": [
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/${checkpoint}",
-      "dir": "checkpoints",
-      "filename": "${checkpoint}"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_a}",
-      "dir": "loras",
-      "filename": "${lora_a}"
-    },
-    {
-      "url": "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_b}",
-      "dir": "loras",
-      "filename": "${lora_b}"
-    }${lora_c_block},
-    {
-      "url": "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazyneg.safetensors",
-      "dir": "embeddings",
-      "filename": "lazyneg.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/NeigeSnowflake/neigeworkflow/resolve/main/lazypos.safetensors",
-      "dir": "embeddings",
-      "filename": "lazypos.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/datasets/WhiteAiZ/sd-webui-forge-classic/resolve/main/models/embeddings/Smooth_Negative-neg.safetensors",
-      "dir": "embeddings",
-      "filename": "Smooth_Negative-neg.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/Coercer/Lora_Compilation/resolve/main/Smooth_Quality.safetensors",
-      "dir": "embeddings",
-      "filename": "Smooth_Quality.safetensors"
-    },
-    {
-      "url": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth",
-      "dir": "sams",
-      "filename": "sam_vit_b_01ec64.pth"
-    },
-    {
-      "url": "https://huggingface.co/Anzhc/Anzhcs_YOLOs/resolve/main/Anzhc%20Face%20seg%201024%20v2%20y8n.pt",
-      "dir": "ultralytics/bbox",
-      "filename": "Anzhc_Faceseg_1024_v2_y8n.pt"
-    },
-    {
-      "url": "https://huggingface.co/adbrasi/wanlotest/resolve/main/Eyeful_v2-Individual.pt",
-      "dir": "ultralytics/bbox",
-      "filename": "Eyeful_v2-Paired.pt"
-    },
-    {
-      "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8s.pt",
-      "dir": "ultralytics/bbox",
-      "filename": "hand_yolov8s.pt"
-    },
-    {
-      "url": "https://huggingface.co/adbrasi/wanlotest/resolve/main/ntd11_anime_nsfw_segm_v5-variant1.pt",
-      "dir": "ultralytics/bbox",
-      "filename": "ntd11_anime_nsfw_segm_v5-variant1.pt"
-    },
-    {
-      "url": "https://huggingface.co/adbrasi/testedownload/resolve/main/99coins_anime_girl_face_m_seg.pt",
-      "dir": "ultralytics/bbox",
-      "filename": "99coins_anime_girl_face_m_seg.pt"
-    },
-    {
-      "url": "https://huggingface.co/adbrasi/wanlotest/resolve/main/2x-AnimeSharpV4_RCAN_fp16_op17.onnx",
-      "dir": "upscale_models",
-      "filename": "2x-AnimeSharpV4_RCAN_fp16_op17.onnx"
-    },
-    {
-      "url": "https://huggingface.co/Kim2091/AnimeSharp/resolve/main/4x-AnimeSharp.pth",
-      "dir": "upscale_models",
-      "filename": "4x-AnimeSharp.pth"
-    },
-    {
-      "url": "https://huggingface.co/adbrasi/wanlotest/resolve/main/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors",
-      "dir": "upscale_models",
-      "filename": "2x-AnimeSharpV4_Fast_RCAN_PU.safetensors"
-    },
-    {
-      "url": "https://huggingface.co/Kim2091/AnimeSharpV3/resolve/main/2x-AnimeSharpV3.pth",
-      "dir": "upscale_models",
-      "filename": "2x-AnimeSharpV3.pth"
-    },
-    {
-      "url": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
-      "dir": "upscale_models",
-      "filename": "4x_foolhardy_Remacri.pth"
-    },
-    {
-      "url": "https://huggingface.co/Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2.pth",
-      "dir": "upscale_models",
-      "filename": "4x-UltraSharpV2.pth"
-    },
-    {
-      "url": "https://huggingface.co/Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2_Lite.pth",
-      "dir": "upscale_models",
-      "filename": "4x-UltraSharpV2_Lite.pth"
-    }
+${models_json}
   ],
   "nodes": [
     "https://github.com/adbrasi/huggpackreator",
@@ -338,7 +296,7 @@ wait_for_arrakis_dir() {
   local waited=0
 
   while [ "$waited" -lt "$MAX_WAIT_SECONDS" ]; do
-    if [ -d "$ARRAKIS_DIR" ]; then
+    if [ -f "$ARRAKIS_DIR/start.py" ] && [ -d "$PRESETS_DIR" ]; then
       return 0
     fi
 
@@ -356,16 +314,16 @@ wait_for_arrakis_dir() {
 log_info "Preparing custom preset injection for Arrakis Start..."
 log_info "Preset set: MEITABUU, StudioneverAI, Auroredrem3d, Juliaverse, RuleGirl3d"
 log_info "HF repo: $HF_MODELS_REPO"
-log_info "Presets baixam checkpoints/LoRAs do preset, mais embeds/upscales/SAM/ultralytics e nodes do Arrakis2."
+log_info "Presets baixam checkpoint dedicado + todas as LoRAs do pack HF, mais embeds/upscales/SAM/ultralytics e nodes do Arrakis2."
 
 validate_hf_assets
 start_upstream_bootstrap
 
-if [ -d "$ARRAKIS_DIR" ] || wait_for_arrakis_dir; then
+if { [ -f "$ARRAKIS_DIR/start.py" ] && [ -d "$PRESETS_DIR" ]; } || wait_for_arrakis_dir; then
   write_presets
 else
-  log_warn "Could not find $ARRAKIS_DIR before upstream bootstrap finished."
-  log_warn "If the preset does not appear, rerun the wrapper after /workspace/comfy/arrakis_start exists."
+  log_warn "Could not find a ready Arrakis checkout at $ARRAKIS_DIR before upstream bootstrap finished."
+  log_warn "If the preset does not appear, rerun the wrapper after /workspace/comfy/arrakis_start/start.py exists."
 fi
 
 wait "$BOOTSTRAP_PID"

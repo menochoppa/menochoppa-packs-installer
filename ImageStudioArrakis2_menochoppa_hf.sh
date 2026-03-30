@@ -185,12 +185,16 @@ download_hf() {
     if command -v aria2c >/dev/null 2>&1; then
         aria2c "${aria_args[@]}" "$url" || \
         wget "${wget_args[@]}" "$url" || \
-        curl "${curl_args[@]}" "$url" || \
-        log_error "Download HF falhou: $resolved_name"
+        curl "${curl_args[@]}" "$url" || {
+            log_error "Download HF falhou: $resolved_name"
+            return 1
+        }
     else
         wget "${wget_args[@]}" "$url" || \
-        curl "${curl_args[@]}" "$url" || \
-        log_error "Download HF falhou: $resolved_name"
+        curl "${curl_args[@]}" "$url" || {
+            log_error "Download HF falhou: $resolved_name"
+            return 1
+        }
     fi
 }
 
@@ -230,19 +234,29 @@ download_file() {
     if command -v aria2c >/dev/null 2>&1; then
         if [ -n "$filename" ]; then
             aria2c -c -x 4 -s 4 --console-log-level=warn --dir="$target_dir" --out="$filename" "$url" || \
-            wget -q --show-progress -c -O "$target_dir/$filename" "$url" || \
-            log_error "Download falhou: $filename"
+            wget -q --show-progress -c -O "$target_dir/$filename" "$url" || {
+                log_error "Download falhou: $filename"
+                return 1
+            }
         else
             aria2c -c -x 4 -s 4 --console-log-level=warn --dir="$target_dir" "$url" || \
-            (cd "$target_dir" && wget -q --show-progress -c "$url") || \
-            log_error "Download falhou: $url"
+            (cd "$target_dir" && wget -q --show-progress -c "$url") || {
+                log_error "Download falhou: $url"
+                return 1
+            }
         fi
     elif [ -n "$filename" ]; then
         wget -q --show-progress -c -O "$target_dir/$filename" "$url" || \
-        log_error "Download falhou: $filename"
+        {
+            log_error "Download falhou: $filename"
+            return 1
+        }
     else
         (cd "$target_dir" && wget -q --show-progress -c "$url") || \
-        log_error "Download falhou: $url"
+        {
+            log_error "Download falhou: $url"
+            return 1
+        }
     fi
 }
 
