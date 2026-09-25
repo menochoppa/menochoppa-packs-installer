@@ -29,6 +29,7 @@ REQUIRED_MODEL_PATHS=(
   "checkpoints/Hassaku.safetensors"
   "checkpoints/magicILL_magicILLEPSV10.safetensors"
   "checkpoints/waiIllustriousSDXL_v140.safetensors"
+  "checkpoints/animeScreenshotMerge_v40.safetensors"
   "loras/Balecxi_Style_Illustrious-10.safetensors"
   "loras/DisneyStudios_style-12IL.safetensors"
   "loras/IFL_v1.0_IL.safetensors"
@@ -37,6 +38,8 @@ REQUIRED_MODEL_PATHS=(
   "loras/pantsushi.safetensors"
   "loras/princess_rc_il.safetensors"
   "loras/shexyo_style_trigger.safetensors"
+  "loras/anime_screencap-IL-NOOB_v3.safetensors"
+  "loras/ht_series_style_v2_illustrious.safetensors"
   "embeddings/lazyneg.safetensors"
   "embeddings/lazypos.safetensors"
   "embeddings/Smooth_Negative-neg.safetensors"
@@ -117,18 +120,31 @@ write_preset_file() {
   local lora_a="$4"
   local lora_b="$5"
   local lora_c="${6:-}"
-  local primary_loras="${lora_a}, ${lora_b}"
+  local extra_lora_a="${7:-}"
+  local extra_lora_b="${8:-}"
+  local primary_loras=""
   local lora_file
   local -a preset_entries=(
     "https://huggingface.co/${HF_MODELS_REPO}/resolve/main/checkpoints/${checkpoint}|checkpoints|${checkpoint}"
   )
 
-  if [ -n "$lora_c" ]; then
-    primary_loras="${primary_loras}, ${lora_c}"
-  fi
+  for lora_file in "$lora_a" "$lora_b" "$lora_c" "$extra_lora_a" "$extra_lora_b"; do
+    if [ -n "$lora_file" ]; then
+      if [ -n "$primary_loras" ]; then
+        primary_loras="${primary_loras}, "
+      fi
+      primary_loras="${primary_loras}${lora_file}"
+    fi
+  done
 
   for lora_file in "${HF_LORA_FILES[@]}"; do
     preset_entries+=("https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_file}|loras|${lora_file}")
+  done
+
+  for lora_file in "$extra_lora_a" "$extra_lora_b"; do
+    if [ -n "$lora_file" ]; then
+      preset_entries+=("https://huggingface.co/${HF_MODELS_REPO}/resolve/main/loras/${lora_file}|loras|${lora_file}")
+    fi
   done
 
   local models_json
@@ -238,6 +254,14 @@ write_presets() {
     "waiIllustriousSDXL_v140.safetensors" \
     "pantsushi.safetensors" \
     "lightingSlider.safetensors"
+
+  write_preset_file "$PRESETS_DIR/meitanime.json" "MEITANIME" \
+    "animeScreenshotMerge_v40.safetensors" \
+    "" \
+    "" \
+    "" \
+    "anime_screencap-IL-NOOB_v3.safetensors" \
+    "ht_series_style_v2_illustrious.safetensors"
 }
 
 validate_hf_assets() {
@@ -312,7 +336,7 @@ wait_for_arrakis_dir() {
 }
 
 log_info "Preparing custom preset injection for Arrakis Start..."
-log_info "Preset set: MEITABUU, StudioneverAI, Auroredrem3d, Juliaverse, RuleGirl3d"
+log_info "Preset set: MEITABUU, StudioneverAI, Auroredrem3d, Juliaverse, RuleGirl3d, MEITANIME"
 log_info "HF repo: $HF_MODELS_REPO"
 log_info "Presets baixam checkpoint dedicado + todas as LoRAs do pack HF, mais embeds/upscales/SAM/ultralytics e nodes do Arrakis2."
 
