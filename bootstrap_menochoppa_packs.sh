@@ -20,8 +20,7 @@ COMFY_BASE="${COMFY_BASE:-/workspace/comfy}"
 ARRAKIS_DIR="${ARRAKIS_DIR:-$COMFY_BASE/arrakis_start}"
 PRESETS_DIR="$ARRAKIS_DIR/presets"
 HF_MODELS_REPO="${HF_MODELS_REPO:-menochoppa/comfy_models_pack}"
-POLL_INTERVAL="${POLL_INTERVAL:-1}"
-MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-1800}"
+WEB_PORT="${WEB_PORT:-8090}"
 VALIDATE_HF_ASSETS="${VALIDATE_HF_ASSETS:-0}"
 
 REQUIRED_MODEL_PATHS=(
@@ -308,46 +307,145 @@ else:
 PY
 }
 
-start_upstream_bootstrap() {
-  log_info "Starting upstream Arrakis bootstrap in background..."
-  (
-    curl -fsSL "$UPSTREAM_BOOTSTRAP_URL" | bash
-  ) &
-  BOOTSTRAP_PID=$!
+setup_arrakis() {
+  local bootstrap_dir
+  bootstrap_dir="$(mktemp -d)"
+  # The upstream script ends by exec'ing a long-running selector. Download it
+  # completely and replace ONLY that known launch line in a temporary copy so
+  # setup can finish before we write presets. Never edit the upstream checkout.
+  if ! curl -fsSL --retry 3 "$UPSTREAM_BOOTSTRAP_URL" -o "$bootstrap_dir/upstream.sh"; then
+    rm -rf -- "$bootstrap_dir"
+    log_error "Falha ao baixar o bootstrap original. Nenhum preset foi alterado."
+    return 1
+  fi
+  if ! python3 - "$bootstrap_dir/upstream.sh" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+source = path.read_text()
+launch = '    exec "$ARRAKIS_PYTHON" start.py --web-only'
+if source.count(launch) != 1:
+    sys.exit("[ERR] Bootstrap original mudou: linha de inicializacao nao reconhecida. Abortando.")
+path.write_text(source.replace(launch, '    return 0 # Selector started by Menochoppa wrapper'))
+PY
+  then
+    rm -rf -- "$bootstrap_dir"
+    return 1
+  fi
+  log_info "Preparando/atualizando Arrakis antes de gravar os presets..."
+  local result=0
+  COMFY_BASE="$COMFY_BASE" WEB_PORT="$WEB_PORT" bash "$bootstrap_dir/upstream.sh" || result=$?
+  rm -rf -- "$bootstrap_dir"
+  return "$result"
 }
 
-wait_for_arrakis_dir() {
-  local waited=0
-
-  while [ "$waited" -lt "$MAX_WAIT_SECONDS" ]; do
-    if [ -f "$ARRAKIS_DIR/start.py" ] && [ -d "$PRESETS_DIR" ]; then
-      return 0
+protect_custom_presets() {
+  # An upstream stash --include-untracked must not remove our JSON files on
+  # later runs of either installer. Use local Git excludes, not upstream edits.
+  local exclude preset
+  exclude="$(git -C "$ARRAKIS_DIR" rev-parse --git-path info/exclude)"
+  case "$exclude" in
+    /*) ;;
+    *) exclude="$ARRAKIS_DIR/$exclude" ;;
+  esac
+  mkdir -p "$(dirname "$exclude")"
+  touch "$exclude"
+  for preset in meitabuu studioneverai auroredrem3d juliaverse rulegirl3d meitanime; do
+    if ! grep -Fxq "/presets/$preset.json" "$exclude"; then
+      printf '\n/presets/%s.json\n' "$preset" >> "$exclude"
     fi
-
-    if ! kill -0 "$BOOTSTRAP_PID" >/dev/null 2>&1; then
-      return 1
-    fi
-
-    sleep "$POLL_INTERVAL"
-    waited=$((waited + POLL_INTERVAL))
   done
-
-  return 1
 }
 
-log_info "Preparing custom preset injection for Arrakis Start..."
-log_info "Preset set: MEITABUU, StudioneverAI, Auroredrem3d, Juliaverse, RuleGirl3d, MEITANIME"
-log_info "HF repo: $HF_MODELS_REPO"
-log_info "Presets baixam checkpoint dedicado + todas as LoRAs do pack HF, mais embeds/upscales/SAM/ultralytics e nodes do Arrakis2."
+selector_port_status() {
+  # Exit 0: free; 10: selector from this checkout; anything else: abort.
+  # Inspect only. Never kill an unrelated service or an active installation.
+  "$ARRAKIS_DIR/.venv/bin/python" - "$WEB_PORT" "$ARRAKIS_DIR" <<'PY'
+import errno
+import os
+from pathlib import Path
+import socket
+import sys
 
-validate_hf_assets
-start_upstream_bootstrap
+port = int(sys.argv[1])
+checkout = Path(sys.argv[2]).resolve()
+try:
+    with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        probe.bind(("0.0.0.0", port))
+except OSError as exc:
+    if exc.errno != errno.EADDRINUSE:
+        sys.exit(f"[ERR] Nao foi possivel verificar a porta {port}: {exc}")
+else:
+    sys.exit(0)
 
-if { [ -f "$ARRAKIS_DIR/start.py" ] && [ -d "$PRESETS_DIR" ]; } || wait_for_arrakis_dir; then
+inodes = set()
+for table in ("/proc/net/tcp", "/proc/net/tcp6"):
+    try:
+        for line in Path(table).read_text().splitlines()[1:]:
+            fields = line.split()
+            if fields[3] == "0A" and int(fields[1].rsplit(":", 1)[1], 16) == port:
+                inodes.add(fields[9])
+    except OSError:
+        pass
+
+owners = set()
+recognized = set()
+for process in Path("/proc").iterdir():
+    if not process.name.isdigit():
+        continue
+    try:
+        sockets = {os.readlink(fd) for fd in (process / "fd").iterdir()}
+        if not any(f"socket:[{inode}]" in sockets for inode in inodes):
+            continue
+        owners.add(process.name)
+        args = (process / "cmdline").read_bytes().decode(errors="replace").split("\0")
+        cwd = (process / "cwd").resolve()
+        if any(arg and (cwd / arg).resolve() == checkout / "start.py" for arg in args):
+            recognized.add(process.name)
+    except OSError:
+        continue
+if owners and owners == recognized:
+    sys.exit(10)
+sys.exit(f"[ERR] Porta {port} ocupada por outro servico ou processo nao identificavel. "
+         "Nenhum processo foi encerrado. Use WEB_PORT=8091 e encaminhe essa porta no provedor.")
+PY
+}
+
+main() {
+  if [ "$ARRAKIS_DIR" != "$COMFY_BASE/arrakis_start" ]; then
+    log_error "ARRAKIS_DIR deve ser COMFY_BASE/arrakis_start; ajuste COMFY_BASE."
+    return 1
+  fi
+  command -v python3 >/dev/null || { log_error "python3 e necessario."; return 1; }
+  log_info "Preset set: MEITABUU, StudioneverAI, Auroredrem3d, Juliaverse, RuleGirl3d, MEITANIME"
+  validate_hf_assets
+  setup_arrakis || return "$?"
+  if [ ! -f "$ARRAKIS_DIR/start.py" ] || [ ! -x "$ARRAKIS_DIR/.venv/bin/python" ]; then
+    log_error "Bootstrap terminou sem preparar o Arrakis. Presets nao foram gravados."
+    return 1
+  fi
+  protect_custom_presets
   write_presets
-else
-  log_warn "Could not find a ready Arrakis checkout at $ARRAKIS_DIR before upstream bootstrap finished."
-  log_warn "If the preset does not appear, rerun the wrapper after /workspace/comfy/arrakis_start/start.py exists."
-fi
 
-wait "$BOOTSTRAP_PID"
+  local port_status=0
+  selector_port_status || port_status=$?
+  if [ "$port_status" -eq 10 ]; then
+    log_success "Arrakis ja esta rodando na porta $WEB_PORT. Atualize a pagina para ver os seis presets."
+    return 0
+  elif [ "$port_status" -ne 0 ]; then
+    return "$port_status"
+  fi
+
+  export WEB_PORT
+  export COMFY_PYTHON="$COMFY_BASE/.venv/bin/python"
+  export COMFY_CLI="$COMFY_BASE/.venv/bin/comfy"
+  export VIRTUAL_ENV="$COMFY_BASE/.venv"
+  export PATH="$VIRTUAL_ENV/bin:$PATH"
+  cd "$ARRAKIS_DIR"
+  log_success "Seis presets prontos. Iniciando seletor na porta $WEB_PORT..."
+  exec "$ARRAKIS_DIR/.venv/bin/python" start.py --web-only
+}
+
+main "$@"
