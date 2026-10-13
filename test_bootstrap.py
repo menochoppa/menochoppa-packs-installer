@@ -107,8 +107,10 @@ main "$@"
         (self.checkout / ".git/info/exclude").write_text(".venv/\n")
         impact = self.base / "ComfyUI/custom_nodes/ComfyUI-Impact-Pack/js/impact-pack.js"
         impact.parent.mkdir(parents=True)
-        old = b"node.connect(link_info.origin_slot, node.id, 'input1');"
-        new = b"node.connect(link_info.origin_slot, node, 'input1');"
+        old = (b"if(link_info.target_slot == 0 && this.inputs.length > 3) { // legacy\n"
+               b"origin_type = this.inputs[1].type;\n"
+               b"node.connect(link_info.origin_slot, node.id, 'input1');\n}")
+        new = b"/* Menochoppa: obsolete slot-zero reconnect removed. */"
         original = b"// upstream\n" + old + b"\n"
         impact.write_bytes(original)
         result = self.run_wrapper()
@@ -120,10 +122,12 @@ main "$@"
         hook = self.base / "ComfyUI/custom_nodes/menochoppa_impact_compat/__init__.py"
         subprocess.run([sys.executable, str(hook)], check=True, capture_output=True)
         self.assertEqual(len(list(impact.parent.glob("*.menochoppa-backup-*"))), 1)
-        updated = b"// updated upstream\n" + old + b"\n"
+        # Also migrate the earlier node-object patch, not just raw upstream.
+        updated_old = old.replace(b"node.id", b"node")
+        updated = b"// updated upstream\n" + updated_old + b"\n"
         impact.write_bytes(updated)
         subprocess.run([sys.executable, str(hook)], check=True, capture_output=True)
-        self.assertEqual(impact.read_bytes(), updated.replace(old, new))
+        self.assertEqual(impact.read_bytes(), updated.replace(updated_old, new))
         self.assertEqual(len(list(impact.parent.glob("*.menochoppa-backup-*"))), 2)
         unknown = b"// future upstream with a different implementation\n"
         impact.write_bytes(unknown)

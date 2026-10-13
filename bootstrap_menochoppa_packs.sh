@@ -423,6 +423,7 @@ install_impact_compatibility() {
 import hashlib
 import logging
 from pathlib import Path
+import re
 import shutil
 
 NODE_CLASS_MAPPINGS = {}
@@ -430,28 +431,35 @@ NODE_DISPLAY_NAME_MAPPINGS = {}
 logger = logging.getLogger("menochoppa_impact_compat")
 
 def apply_compatibility(root):
-    old = b"node.connect(link_info.origin_slot, node.id, 'input1');"
-    new = b"node.connect(link_info.origin_slot, node, 'input1');"
+    # Remove the obsolete slot-zero workaround entirely: its type override
+    # can select the INT widget type instead of the incoming STRING type.
+    # Also migrate our earlier node-object fix, which retained that override.
+    obsolete = re.compile(
+        rb"if\s*\(link_info\.target_slot\s*==\s*0\s*&&\s*this\.inputs\.length\s*>\s*3\)\s*\{"
+        rb"(?:\s|//[^\r\n]*)*origin_type\s*=\s*this\.inputs\[1\]\.type;\s*"
+        rb"node\.connect\(link_info\.origin_slot,\s*node(?:\.id)?,\s*'input1'\);\s*\}"
+    )
     files = list(Path(root).glob("*/js/impact-pack.js"))
     if not files:
         logger.info("Impact Pack ainda nao instalado; correcao sera verificada no proximo inicio.")
     for path in files:
         try:
             source = path.read_bytes()
-            if old not in source:
-                if new in source:
-                    logger.info("Impact Pack: compatibilidade ja aplicada.")
+            count = len(obsolete.findall(source))
+            if count == 0:
+                if b"node.connect(link_info.origin_slot, node.id, 'input1');" in source:
+                    logger.warning("Impact Pack: implementacao diferente; arquivo preservado.")
                 else:
-                    logger.info("Impact Pack: trecho antigo ausente; arquivo preservado.")
+                    logger.info("Impact Pack: bloco antigo ausente; arquivo preservado.")
                 continue
-            if source.count(old) != 1:
+            if count != 1:
                 logger.warning("Impact Pack: trecho ambiguo em %s; arquivo preservado.", path)
                 continue
             digest = hashlib.sha256(source).hexdigest()[:16]
             backup = path.with_name(path.name + ".menochoppa-backup-" + digest)
             if not backup.exists():
                 shutil.copy2(path, backup)
-            path.write_bytes(source.replace(old, new))
+            path.write_bytes(obsolete.sub(b"/* Menochoppa: obsolete slot-zero reconnect removed. */", source))
             logger.warning("Impact Pack: findInputSlot corrigido; backup em %s. Atualize o navegador com Ctrl+F5.", backup)
         except OSError:
             logger.exception("Impact Pack: nao foi possivel corrigir %s.", path)

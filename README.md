@@ -17,8 +17,10 @@ Uma exclusao local do Git protege os seis JSONs contra o `git stash` das
 atualizacoes seguintes. Nenhum stash anterior e apagado ou aplicado.
 
 O mesmo comando instala a compatibilidade do Impact Pack para o erro
-`findInputSlot is not a function`. A chamada antiga que passa `node.id` passa
-a receber o objeto `node`, com backup do JavaScript original. A verificacao
+`findInputSlot is not a function`. O bloco antigo que reconecta o slot zero e
+sobrescreve o tipo da entrada e removido, com backup do JavaScript original.
+Isso tambem evita um switch de texto receber o tipo INT de um widget.
+A verificacao
 acontece imediatamente e a cada inicio do ComfyUI por meio do custom node
 `menochoppa_impact_compat`, inclusive depois de instalar ou atualizar os presets.
 Se o trecho antigo nao existir, o JavaScript e preservado. Depois de executar
