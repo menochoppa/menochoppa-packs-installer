@@ -413,6 +413,55 @@ sys.exit(f"[ERR] Porta {port} ocupada por outro servico ou processo nao identifi
 PY
 }
 
+install_impact_compatibility() {
+  local hook_dir="$COMFY_BASE/ComfyUI/custom_nodes/menochoppa_impact_compat"
+  mkdir -p "$hook_dir"
+  # ComfyUI imports this hook at every start, after preset installation has
+  # had the chance to clone/update Impact Pack. No polling or server changes.
+  cat > "$hook_dir/__init__.py" <<'PY'
+"""Compatibility for the Impact Pack legacy node-id connect call."""
+import hashlib
+import logging
+from pathlib import Path
+import shutil
+
+NODE_CLASS_MAPPINGS = {}
+NODE_DISPLAY_NAME_MAPPINGS = {}
+logger = logging.getLogger("menochoppa_impact_compat")
+
+def apply_compatibility(root):
+    old = b"node.connect(link_info.origin_slot, node.id, 'input1');"
+    new = b"node.connect(link_info.origin_slot, node, 'input1');"
+    files = list(Path(root).glob("*/js/impact-pack.js"))
+    if not files:
+        logger.info("Impact Pack ainda nao instalado; correcao sera verificada no proximo inicio.")
+    for path in files:
+        try:
+            source = path.read_bytes()
+            if old not in source:
+                if new in source:
+                    logger.info("Impact Pack: compatibilidade ja aplicada.")
+                else:
+                    logger.info("Impact Pack: trecho antigo ausente; arquivo preservado.")
+                continue
+            if source.count(old) != 1:
+                logger.warning("Impact Pack: trecho ambiguo em %s; arquivo preservado.", path)
+                continue
+            digest = hashlib.sha256(source).hexdigest()[:16]
+            backup = path.with_name(path.name + ".menochoppa-backup-" + digest)
+            if not backup.exists():
+                shutil.copy2(path, backup)
+            path.write_bytes(source.replace(old, new))
+            logger.warning("Impact Pack: findInputSlot corrigido; backup em %s. Atualize o navegador com Ctrl+F5.", backup)
+        except OSError:
+            logger.exception("Impact Pack: nao foi possivel corrigir %s.", path)
+
+apply_compatibility(Path(__file__).resolve().parent.parent)
+PY
+  python3 "$hook_dir/__init__.py"
+  log_success "Compatibilidade do Impact Pack instalada; verificada agora e em cada inicio do ComfyUI."
+}
+
 main() {
   if [ "$ARRAKIS_DIR" != "$COMFY_BASE/arrakis_start" ]; then
     log_error "ARRAKIS_DIR deve ser COMFY_BASE/arrakis_start; ajuste COMFY_BASE."
@@ -428,6 +477,7 @@ main() {
   fi
   protect_custom_presets
   write_presets
+  install_impact_compatibility
 
   local port_status=0
   selector_port_status || port_status=$?

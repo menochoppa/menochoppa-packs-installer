@@ -103,6 +103,33 @@ main "$@"
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
         self.assertFalse((self.checkout / "presets").exists())
 
+    def test_impact_hook_patches_on_start_and_survives_update(self):
+        (self.checkout / ".git/info/exclude").write_text(".venv/\n")
+        impact = self.base / "ComfyUI/custom_nodes/ComfyUI-Impact-Pack/js/impact-pack.js"
+        impact.parent.mkdir(parents=True)
+        old = b"node.connect(link_info.origin_slot, node.id, 'input1');"
+        new = b"node.connect(link_info.origin_slot, node, 'input1');"
+        original = b"// upstream\n" + old + b"\n"
+        impact.write_bytes(original)
+        result = self.run_wrapper()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(impact.read_bytes(), original.replace(old, new))
+        backups = list(impact.parent.glob("*.menochoppa-backup-*"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_bytes(), original)
+        hook = self.base / "ComfyUI/custom_nodes/menochoppa_impact_compat/__init__.py"
+        subprocess.run([sys.executable, str(hook)], check=True, capture_output=True)
+        self.assertEqual(len(list(impact.parent.glob("*.menochoppa-backup-*"))), 1)
+        updated = b"// updated upstream\n" + old + b"\n"
+        impact.write_bytes(updated)
+        subprocess.run([sys.executable, str(hook)], check=True, capture_output=True)
+        self.assertEqual(impact.read_bytes(), updated.replace(old, new))
+        self.assertEqual(len(list(impact.parent.glob("*.menochoppa-backup-*"))), 2)
+        unknown = b"// future upstream with a different implementation\n"
+        impact.write_bytes(unknown)
+        subprocess.run([sys.executable, str(hook)], check=True, capture_output=True)
+        self.assertEqual(impact.read_bytes(), unknown)
+
     def test_unknown_upstream_aborts_before_execution(self):
         self.upstream.write_text('echo SHOULD_NOT_EXECUTE\n')
         result = self.run_wrapper()

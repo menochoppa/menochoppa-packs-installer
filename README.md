@@ -16,6 +16,15 @@ Os presets sao gravados **depois** da atualizacao do repositorio original.
 Uma exclusao local do Git protege os seis JSONs contra o `git stash` das
 atualizacoes seguintes. Nenhum stash anterior e apagado ou aplicado.
 
+O mesmo comando instala a compatibilidade do Impact Pack para o erro
+`findInputSlot is not a function`. A chamada antiga que passa `node.id` passa
+a receber o objeto `node`, com backup do JavaScript original. A verificacao
+acontece imediatamente e a cada inicio do ComfyUI por meio do custom node
+`menochoppa_impact_compat`, inclusive depois de instalar ou atualizar os presets.
+Se o trecho antigo nao existir, o JavaScript e preservado. Depois de executar
+em uma instancia ja aberta, reinicie o ComfyUI pelo Arrakis e use Ctrl+F5 no
+navegador antes de abrir o workflow original.
+
 Se o seletor desse Arrakis ja estiver na porta 8090, o instalador o reaproveita;
 atualize a pagina do seletor para ver os presets. Nenhum processo e encerrado.
 Se outro servico ocupar essa porta, o instalador avisa e encerra sem mata-lo.
